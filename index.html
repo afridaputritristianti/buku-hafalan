@@ -111,6 +111,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 footer{text-align:center;font-size:12px;color:var(--muted)}
 footer a{color:var(--muted)}
 ol.steps{margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+.ks{display:flex;flex-direction:column;gap:6px}
+.ks+.ks{border-top:1px solid var(--line);padding-top:12px}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:8px;font-size:14px;align-items:baseline}
+.kv>*{min-width:0}
+.chip.sm{padding:4px 10px;font-size:13px}
+.seg.sm button{padding:5px 9px;font-size:13px}
+.mrow{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.mrow .opts{display:flex;gap:10px;flex-wrap:wrap}
+.tag{font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--empty);color:var(--muted)}
+.tag.guru{background:var(--gold-soft);color:var(--gold)}
+.tag.rumah{background:var(--accent-soft);color:var(--accent)}
+table.rekap{width:100%;border-collapse:collapse;font-size:14px}
+.rekap th,.rekap td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+.rekap th:first-child,.rekap td:first-child{text-align:left;color:var(--muted)}
+.rekap th{font-size:12px;color:var(--muted);font-weight:600}
 @media (prefers-reduced-motion:no-preference){.bar>i{transition:width .4s ease}}
 </style>
 </head>
@@ -146,6 +161,10 @@ const SURAT="Al-Fatihah 7|Al-Baqarah 286|Ali Imran 200|An-Nisa 176|Al-Maidah 120
 const HARI=["Sen","Sel","Rab","Kam","Jum","Sab","Min"];
 const BULAN=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const LANCAR=["Lancar","Kurang lancar","Ulang"];
+/* awal tiap juz (surat, ayat) */
+const JUZ=[[1,1],[2,142],[2,253],[3,93],[4,24],[4,148],[5,83],[6,111],[7,88],[8,41],[9,93],[11,6],[12,53],[15,1],[17,1],[18,75],[21,1],[23,1],[25,21],[27,56],[29,46],[33,31],[36,28],[39,32],[41,47],[46,1],[51,31],[58,1],[67,1],[78,1]];
+const MUR_DAYS=7;   /* surat dianggap perlu murojaah kalau belum disentuh selama ini (hari) */
+const WEAK_MIN=2;   /* "sering" kurang lancar/ulang: minimal sekian kali dalam 30 hari */
 
 const S={kids:[],logs:{},tab:"isi",kidId:null,date:todayStr(),form:null,confirmDel:null,pendingRestore:null,busy:"",group:"",openKid:null,justSaved:false};
 /* label menyesuaikan pemakai: guru (banyak murid) atau orang tua */
@@ -202,19 +221,69 @@ function dayStatus(kid,log){
 function lastSetor(kidId,before){
   const l=kidLogs(kidId).filter(x=>x.setor&&x.setor.surat&&(!before||x.date<before));return l[l.length-1];
 }
+function juzOf(s,a){let j=1;JUZ.forEach(([js,ja],i)=>{if(s>js||(s===js&&a>=ja))j=i+1});return j}
+function juzRange(r){const a=juzOf(+r.surat,+r.dari||1),b=juzOf(+r.surat,+r.sampai||+r.dari||1);return a===b?a:a+"–"+b}
+const predPill=v=>v?`<span class="pill ${v==="Lancar"?"ok":v==="Ulang"?"low":"mid"}">${esc(v)}</span>`:"";
+const srcTag=v=>v?`<span class="tag ${v}">${v==="guru"?"Guru":"Rumah"}</span>`:"";
+const emptyMur=()=>({surat:"",dari:"",sampai:"",sumber:"rumah",lancar:""});
+function daysBetween(a,b){return Math.round((parse(b)-parse(a))/864e5)}
+/* posisi hafalan: setoran terakhir, atau hafalan awal yang diisi di tab Anak */
+function lastPos(k,before){
+  const l=lastSetor(k.id,before);if(l)return{setor:l.setor,date:l.date,lancar:l.lancar||""};
+  if(k.awal&&k.awal.surat)return{setor:{surat:k.awal.surat,dari:1,sampai:k.awal.ayat||suratBy(k.awal.surat).ayat},date:"",awal:true};
+  return null;
+}
+const posText=p=>p.awal?`s/d ${suratBy(p.setor.surat).nama} ayat ${p.setor.sampai}`:rangeText(p.setor);
+/* hafalan maju dari An-Nas ke surat sebelumnya */
+function nextStart(r){const su=suratBy(+r.surat);if(+r.sampai<su.ayat)return{surat:+r.surat,dari:+r.sampai+1};return +r.surat>1?{surat:+r.surat-1,dari:1}:null}
+/* panjang setoran per hari: dari target mingguan (5 hari sekolah), kalau tidak ada pakai rata-rata 5 setoran terakhir */
+function dailyLen(k){if(k.targetMinggu)return Math.max(1,Math.ceil(k.targetMinggu/5));
+  const L=kidLogs(k.id).filter(l=>l.setorAyat>0).slice(-5);return L.length?Math.max(1,Math.round(L.reduce((a,l)=>a+l.setorAyat,0)/L.length)):0}
+function nextTarget(k,before){
+  const p=lastPos(k,before);if(!p)return null;
+  if(!p.awal&&p.lancar==="Ulang")return{...p.setor,ulang:true};
+  const st=nextStart(p.setor);if(!st)return null;
+  const n=dailyLen(k);return{surat:st.surat,dari:st.dari,sampai:n?Math.min(suratBy(st.surat).ayat,st.dari+n-1):""};
+}
+const targetText=t=>t.sampai?`${suratBy(t.surat).nama} ${t.dari}–${t.sampai}`:`${suratBy(t.surat).nama} mulai ayat ${t.dari}`;
+/* surat yang sudah dihafal: mana yang lama tidak dimurojaah, mana yang sering kurang lancar/ulang */
+function suratStatus(k){
+  const L=kidLogs(k.id),seen={},t=todayStr(),touch=(s,d)=>{if(!seen[s]||seen[s]<d)seen[s]=d};
+  const start=k.urut?ymd(new Date(k.urut)):t;
+  if(k.awal&&k.awal.surat)for(let s=114;s>=+k.awal.surat;s--)seen[s]=start;
+  L.forEach(l=>{if(l.setor&&l.setor.surat)touch(l.setor.surat,l.date);(l.murojaah||[]).forEach(m=>touch(m.surat,l.date))});
+  const cur=lastPos(k);
+  const stale=Object.entries(seen).map(([s,d])=>({surat:+s,hari:daysBetween(d,t)}))
+    .filter(x=>x.hari>=MUR_DAYS&&!(cur&&+cur.setor.surat===x.surat)).sort((a,b)=>b.hari-a.hari);
+  const from=addDays(t,-30),weak={},add=(s,v)=>{if(v==="Ulang"||v==="Kurang lancar")weak[s]=(weak[s]||0)+1};
+  L.filter(l=>l.date>=from).forEach(l=>{if(l.setor)add(l.setor.surat,l.lancar);(l.murojaah||[]).forEach(m=>add(m.surat,m.lancar))});
+  const lemah=Object.entries(weak).filter(([,n])=>n>=WEAK_MIN).map(([s,n])=>({surat:+s,n})).sort((a,b)=>b.n-a.n);
+  return{stale,lemah,total:Object.keys(seen).length};
+}
 function blankForm(){
-  const prev=lastSetor(S.kidId,S.date);let setor={surat:"",dari:"",sampai:""};
-  if(prev){const s=prev.setor,su=suratBy(s.surat);
-    if(+s.sampai<su.ayat)setor={surat:s.surat,dari:+s.sampai+1,sampai:""};
-    else if(s.surat>1)setor={surat:+s.surat-1,dari:1,sampai:""};}
-  return{setor,tidakSetor:false,alasan:"",murojaah:[{surat:"",dari:"",sampai:""}],lancar:"",catatanGuru:"",catatanRumah:"",existing:false};
+  const kid=S.kids.find(k=>k.id===S.kidId),t=kid&&nextTarget(kid,S.date);
+  return{setor:t?{surat:t.surat,dari:t.dari,sampai:""}:{surat:"",dari:"",sampai:""},halaman:"",tidakSetor:false,alasan:"",murojaah:[emptyMur()],lancar:"",catatanGuru:"",catatanRumah:"",existing:false};
 }
 function loadForm(){
   const l=S.logs[logId(S.kidId,S.date)];
-  if(l){S.form={setor:l.setor?{...l.setor}:{surat:"",dari:"",sampai:""},tidakSetor:!!l.tidakSetor,alasan:l.alasan||"",
-    murojaah:(l.murojaah&&l.murojaah.length?l.murojaah.map(m=>({...m})):[{surat:"",dari:"",sampai:""}]),lancar:l.lancar||"",
+  if(l){S.form={setor:l.setor?{...l.setor}:{surat:"",dari:"",sampai:""},halaman:l.halaman||"",tidakSetor:!!l.tidakSetor,alasan:l.alasan||"",
+    murojaah:(l.murojaah&&l.murojaah.length?l.murojaah.map(m=>({sumber:"",lancar:"",...m})):[emptyMur()]),lancar:l.lancar||"",
     catatanGuru:l.catatanGuru||"",catatanRumah:l.catatanRumah||"",existing:true};}
   else S.form=blankForm();
+}
+/* ringkasan di atas: posisi terakhir, target, dan yang perlu dimurojaah */
+function posHtml(){
+  const vk=visibleKids(),ks=vk.length<=3?vk:vk.filter(k=>k.id===S.kidId),t=todayStr();
+  return ks.map(k=>{const p=lastPos(k),tg=nextTarget(k),ss=suratStatus(k);
+    const perlu=[...ss.lemah.map(x=>({s:x.surat,lbl:x.n+"× kurang"})),
+      ...ss.stale.filter(x=>!ss.lemah.some(y=>y.surat===x.surat)).map(x=>({s:x.surat,lbl:x.hari+" hr"}))].slice(0,4);
+    return`<div class="ks">
+     <div class="sec"><h2>${esc(k.nama)}</h2>${ks.length>1?(k.id===S.kidId?'<span class="hint">sedang dicatat</span>':`<button class="btn ghost" type="button" data-kid="${esc(k.id)}" style="padding:4px 10px">Catat</button>`):""}</div>
+     <div class="kv"><span class="hint">Terakhir</span><span>${p?`<b>${esc(posText(p))}</b> <span class="hint">· Juz ${juzOf(+p.setor.surat,+p.setor.sampai)}${p.date?" · "+fmtDate(p.date):""}</span> ${p.lancar&&p.lancar!=="Lancar"?predPill(p.lancar):""}`
+       :`<span class="hint">Belum ada. Isi setoran pertama, atau isi hafalan awal di tab ${W().One}.</span>`}</span></div>
+     ${tg?`<div class="kv"><span class="hint">${p&&p.date===t?"Target besok":"Target berikutnya"}</span><b>${esc(targetText(tg))}${tg.ulang?" (ulang)":""}</b></div>`:""}
+     ${perlu.length?`<div class="kv"><span class="hint">Perlu murojaah</span><span class="chips">${perlu.map(x=>`<button class="chip sm" type="button" data-addmur="${esc(k.id)}|${x.s}" title="Tambahkan ke murojaah">${esc(suratBy(x.s).nama)} <span class="hint">${x.lbl}</span></button>`).join("")}</span></div>`:""}
+    </div>`}).join("");
 }
 function renderIsi(){
   if(!S.kids.length){$("#view").innerHTML=`<div class="card empty">Belum ada data ${W().one}. Tambahkan dulu di tab <b>${W().One}</b>.<br><br><button class="btn" type="button" data-goto="target">Tambah ${W().one}</button></div>`;return}
@@ -222,42 +291,47 @@ function renderIsi(){
   if(!vk.find(k=>k.id===S.kidId)){S.kidId=vk[0].id;S.form=null}
   if(!S.form)loadForm();
   const kid=S.kids.find(k=>k.id===S.kidId),f=S.form;
-  const prev=lastSetor(S.kidId,S.date);
+  const prev=lastPos(kid,S.date);
   $("#view").innerHTML=`
   <div style="display:flex;flex-direction:column;gap:12px">
+   <div class="card" id="poscard">${posHtml()}</div>
+
    <div class="card">
     ${groupBar()}
     <div class="chips" id="kidchips">${chipsHtml()}</div>
     ${isGuru()?`<p class="hint" id="done-line">${doneLine()}</p>`:""}
     <label>Tanggal<input type="date" id="f-date" value="${S.date}" max="${todayStr()}"></label>
-    <p class="hint" id="f-prev">${prev?`Setoran sebelumnya: <b>${esc(rangeText(prev.setor))}</b> (${fmtDate(prev.date)})`:"Belum ada setoran sebelumnya."}${f.existing?` · <b>Mengedit catatan tanggal ini</b>`:""}</p>
+    <p class="hint" id="f-prev">${prev?`Hafalan sebelumnya: <b>${esc(posText(prev))}</b>${prev.date?` (${fmtDate(prev.date)})`:""}`:"Belum ada setoran sebelumnya."}${f.existing?` · <b>Mengedit catatan tanggal ini</b>`:""}</p>
    </div>
 
    <div class="card">
     <div class="sec"><h2>Setoran baru</h2><span class="hint">${kid.targetMinggu?`target ${kid.targetMinggu} ayat/minggu`:""}</span></div>
     <label class="check"><input type="checkbox" id="f-tidak"${f.tidakSetor?" checked":""}> Hari ini tidak setor</label>
-    <div id="setor-box"${f.tidakSetor?" hidden":""}>
+    <div id="setor-box" style="display:flex;flex-direction:column;gap:10px"${f.tidakSetor?" hidden":""}>
       <div class="row">
         <label>Surat<select id="f-s-surat">${suratOptions(f.setor.surat)}</select></label>
         <label>Ayat dari<input type="number" inputmode="numeric" min="1" id="f-s-dari" value="${esc(f.setor.dari)}"></label>
         <label>sampai<input type="number" inputmode="numeric" min="1" id="f-s-sampai" value="${esc(f.setor.sampai)}"></label>
       </div>
+      <p class="hint" id="f-target"></p>
+      <label>Halaman (opsional)<input id="f-halaman" inputmode="numeric" value="${esc(f.halaman)}" placeholder="sesuai catatan guru"></label>
+      <div class="hint">Predikat dari guru</div>
+      <div class="seg" id="f-lancar">${LANCAR.map(x=>`<button type="button" data-v="${x}" aria-pressed="${f.lancar===x}">${x}</button>`).join("")}</div>
     </div>
     <label id="alasan-box"${f.tidakSetor?"":" hidden"}>Alasan<input id="f-alasan" value="${esc(f.alasan)}" placeholder="mis. sakit, libur, belum siap"></label>
+    <label>Catatan tajwid dari guru<textarea id="f-guru" placeholder="Salin dari foto catatan guru">${esc(f.catatanGuru)}</textarea></label>
     <div class="sum" id="setor-sum"></div>
    </div>
 
    <div class="card">
-    <div class="sec"><h2>Murojaah hari ini</h2><span class="hint">${kid.targetMurojaah?`target ${kid.targetMurojaah} ayat/hari`:""}</span></div>
-    <div id="mur-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="sec"><h2>Murojaah</h2><span class="hint">${kid.targetMurojaah?`target ${kid.targetMurojaah} ayat/hari`:""}</span></div>
+    <p class="hint">Catat yang di sekolah (dari foto guru) dan yang di rumah. Pilih sumber dan predikatnya di tiap baris.</p>
+    <div id="mur-rows" style="display:flex;flex-direction:column;gap:10px"></div>
     <div><button class="btn ghost" id="mur-add" type="button">+ Tambah surat murojaah</button></div>
     <div class="sum" id="mur-sum"></div>
    </div>
 
    <div class="card">
-    <h2>Kelancaran &amp; catatan</h2>
-    <div class="seg" id="f-lancar">${LANCAR.map(x=>`<button type="button" data-v="${x}" aria-pressed="${f.lancar===x}">${x}</button>`).join("")}</div>
-    <label>Catatan guru<textarea id="f-guru" placeholder="Salin dari catatan yang dishare guru">${esc(f.catatanGuru)}</textarea></label>
     <label>Catatan rumah<textarea id="f-rumah" placeholder="mis. ayat 18 masih tertukar">${esc(f.catatanRumah)}</textarea></label>
    </div>
    <p class="hint" id="f-err" style="color:var(--bad)" hidden></p>
@@ -266,8 +340,8 @@ function renderIsi(){
   </div>`;
   renderMurRows();updateSums();
 }
-function suratOptions(sel){
-  let o='<option value="">Pilih surat</option><optgroup label="Juz 30 (dari An-Nas)">';
+function suratOptions(sel,ph="Pilih surat"){
+  let o=`<option value="">${ph}</option><optgroup label="Juz 30 (dari An-Nas)">`;
   for(let n=114;n>=78;n--)o+=`<option value="${n}"${+sel===n?" selected":""}>${n}. ${esc(suratBy(n).nama)}</option>`;
   o+='</optgroup><optgroup label="Surat lainnya">';
   for(let n=77;n>=1;n--)o+=`<option value="${n}"${+sel===n?" selected":""}>${n}. ${esc(suratBy(n).nama)}</option>`;
@@ -283,17 +357,29 @@ function chipsHtml(){return visibleKids().map(k=>{const st=dayStatus(k,S.logs[lo
   return`<button class="chip" data-kid="${esc(k.id)}" aria-pressed="${k.id===S.kidId}"><span class="dot ${st}"></span>${esc(k.nama)}</button>`}).join("")}
 function renderMurRows(){
   $("#mur-rows").innerHTML=S.form.murojaah.map((m,i)=>`
-   <div class="row4" data-i="${i}">
-    <label>Surat<select data-f="surat">${suratOptions(m.surat)}</select></label>
-    <label>Dari<input type="number" inputmode="numeric" min="1" data-f="dari" value="${esc(m.dari)}"></label>
-    <label>Sampai<input type="number" inputmode="numeric" min="1" data-f="sampai" value="${esc(m.sampai)}"></label>
-    <button class="btn x" type="button" data-del="${i}" aria-label="Hapus baris">✕</button>
+   <div class="mrow" data-i="${i}">
+    <div class="row4">
+     <label>Surat<select data-f="surat">${suratOptions(m.surat)}</select></label>
+     <label>Dari<input type="number" inputmode="numeric" min="1" data-f="dari" value="${esc(m.dari)}"></label>
+     <label>Sampai<input type="number" inputmode="numeric" min="1" data-f="sampai" value="${esc(m.sampai)}"></label>
+     <button class="btn x" type="button" data-del="${i}" aria-label="Hapus baris">✕</button>
+    </div>
+    <div class="opts">
+     <div class="seg sm" data-g="sumber">${[["guru","Guru"],["rumah","Rumah"]].map(([v,t])=>`<button type="button" data-rv="${v}" aria-pressed="${m.sumber===v}">${t}</button>`).join("")}</div>
+     <div class="seg sm" data-g="lancar">${LANCAR.map(x=>`<button type="button" data-rv="${x}" aria-pressed="${m.lancar===x}">${x}</button>`).join("")}</div>
+    </div>
    </div>`).join("");
+}
+function targetHint(){
+  const kid=S.kids.find(k=>k.id===S.kidId),t=nextTarget(kid,S.date),s=S.form.setor;if(!t)return"";
+  const same=+s.surat===t.surat&&+s.dari===t.dari&&+s.sampai===+t.sampai;
+  return`Target: <b>${esc(targetText(t))}</b>${t.ulang?" (ulang)":""}${t.sampai&&!same?` <button class="btn ghost" type="button" id="f-filltarget" style="padding:2px 10px">Isi sesuai target</button>`:""}`;
 }
 function updateSums(){
   const f=S.form,kid=S.kids.find(k=>k.id===S.kidId);
   const sa=f.tidakSetor?0:rangeAyat(f.setor);
-  $("#setor-sum").textContent=f.tidakSetor?"Tidak setor hari ini":(sa?`${sa} ayat disetor`:"Isi surat dan ayat");
+  $("#f-target").innerHTML=targetHint();
+  $("#setor-sum").textContent=f.tidakSetor?"Tidak setor hari ini":(sa?`${sa} ayat disetor · Juz ${juzRange(f.setor)}`:"Isi surat dan ayat");
   const ma=f.murojaah.reduce((t,m)=>t+rangeAyat(m),0);
   const tgt=kid.targetMurojaah||0;
   $("#mur-sum").textContent=ma?`${ma} ayat murojaah`+(tgt?(ma>=tgt?" · target tercapai":` · kurang ${tgt-ma} ayat dari target`):""):"Belum ada murojaah";
@@ -315,14 +401,14 @@ function save(){
   el.hidden=true;
   const f=S.form,clean=r=>({surat:+r.surat,dari:+r.dari,sampai:+r.sampai});
   const setor=(!f.tidakSetor&&f.setor.surat&&f.setor.dari&&f.setor.sampai)?clean(f.setor):null;
-  const mur=f.murojaah.filter(m=>m.surat&&m.dari&&m.sampai).map(clean);
-  const body={kidId:S.kidId,date:S.date,setor,setorAyat:setor?rangeAyat(setor):0,tidakSetor:f.tidakSetor,alasan:f.tidakSetor?f.alasan:"",
-    murojaah:mur,murojaahAyat:mur.reduce((t,m)=>t+rangeAyat(m),0),lancar:f.lancar,catatanGuru:f.catatanGuru,catatanRumah:f.catatanRumah,updatedAt:new Date().toISOString()};
+  const mur=f.murojaah.filter(m=>m.surat&&m.dari&&m.sampai).map(m=>({...clean(m),sumber:m.sumber||"",lancar:m.lancar||""}));
+  const body={kidId:S.kidId,date:S.date,setor,setorAyat:setor?rangeAyat(setor):0,halaman:setor?f.halaman.trim():"",tidakSetor:f.tidakSetor,alasan:f.tidakSetor?f.alasan:"",
+    murojaah:mur,murojaahAyat:mur.reduce((t,m)=>t+rangeAyat(m),0),lancar:setor?f.lancar:"",catatanGuru:f.catatanGuru,catatanRumah:f.catatanRumah,updatedAt:new Date().toISOString()};
   const id=logId(S.kidId,S.date),old=S.logs[id];
   S.logs[id]=body;
   if(!persist()){if(old)S.logs[id]=old;else delete S.logs[id];return}
   S.form.existing=true;S.form.dirty=false;
-  toast("Tersimpan");$("#f-save").textContent="Simpan perubahan";$("#kidchips").innerHTML=chipsHtml();renderBanner();
+  toast("Tersimpan");$("#f-save").textContent="Simpan perubahan";$("#kidchips").innerHTML=chipsHtml();$("#poscard").innerHTML=posHtml();renderBanner();
   if(isGuru()){$("#done-line").innerHTML=doneLine();const nk=nextKid();
     $("#next-box").innerHTML=nk?`<button class="btn ghost" type="button" data-kid="${esc(nk.id)}" style="width:100%">Lanjut ke ${esc(nk.nama)} →</button>`:`<p class="hint" style="text-align:center">Semua ${W().one} sudah dicatat hari ini ✓</p>`}
 }
@@ -347,31 +433,49 @@ function kidStats(k){
   return{t,ws,we,d,L,
     sW:wk.reduce((a,l)=>a+(l.setorAyat||0),0),sM:mo.reduce((a,l)=>a+(l.setorAyat||0),0),
     murMetW:wk.filter(l=>tm?l.murojaahAyat>=tm:l.murojaahAyat>0).length,daysSoFar:((d.getDay()+6)%7)+1,
-    last:lastSetor(k.id),guru:[...L].reverse().find(l=>l.catatanGuru)};
+    last:lastPos(k),tg:nextTarget(k),rW:rekap(wk),rM:rekap(mo),guru:[...L].reverse().find(l=>l.catatanGuru)};
 }
+function rekap(L){
+  const p={"Lancar":0,"Kurang lancar":0,"Ulang":0},cnt=v=>{if(p[v]!==undefined)p[v]++};
+  let s=0,m=0,h=0;
+  L.forEach(l=>{s+=l.setorAyat||0;m+=l.murojaahAyat||0;if(l.murojaahAyat>0)h++;if(l.setor)cnt(l.lancar);(l.murojaah||[]).forEach(x=>cnt(x.lancar))});
+  return{s,m,h,p};
+}
+function rekapTable(st,d){const w=st.rW,m=st.rM,row=(lbl,a,b)=>`<tr><td>${lbl}</td><td>${a}</td><td>${b}</td></tr>`;
+  return`<table class="rekap"><thead><tr><th>Rekap</th><th>Minggu ini</th><th>${BULAN[d.getMonth()]}</th></tr></thead><tbody>
+   ${row("Setoran baru",w.s+" ayat",m.s+" ayat")}${row("Murojaah",w.m+" ayat",m.m+" ayat")}${row("Hari murojaah",w.h,m.h)}
+   ${LANCAR.map(x=>row(x,w.p[x],m.p[x])).join("")}</tbody></table>`}
+function perluHtml(k){const ss=suratStatus(k),nm=s=>esc(suratBy(s).nama);if(!ss.total)return"";
+  return`<div class="metric"><div class="top"><span>Perlu murojaah</span></div>
+   ${ss.lemah.length||ss.stale.length?`${ss.lemah.length?`<div class="hint">Sering kurang lancar/ulang (30 hari): ${ss.lemah.map(x=>`<b>${nm(x.surat)}</b> ${x.n}×`).join(", ")}</div>`:""}
+     ${ss.stale.length?`<div class="hint">Belum dimurojaah ≥${MUR_DAYS} hari: ${ss.stale.map(x=>`<b>${nm(x.surat)}</b> (${x.hari} hr)`).join(", ")}</div>`:""}`
+   :`<div class="hint">Semua hafalan sudah dimurojaah dalam ${MUR_DAYS} hari terakhir.</div>`}</div>`}
 function weekDots(k,ws,t){return[...Array(7)].map((_,i)=>{const ds=addDays(ws,i),lg=S.logs[logId(k.id,ds)];
   const cls=ds>t?"fut":dayStatus(k,lg);return`<span><i class="${cls}${ds===t?" today":""}" title="${fmtDate(ds)}"></i>${HARI[i]}</span>`}).join("")}
 function kidCard(k,wFrac,mFrac,compact){
   const st=kidStats(k),tm=k.targetMurojaah||0,t=st.t,d=st.d;
   const hist=[...st.L].reverse().slice(0,10).map(l=>`<div><span class="d">${fmtDate(l.date)}</span>
-    <span>${l.setor?`<b>${esc(rangeText(l.setor))}</b>`:`<span style="color:var(--bad)">Tidak setor</span>${l.alasan?" · "+esc(l.alasan):""}`}
-    ${l.murojaah&&l.murojaah.length?`<br><span class="hint">Murojaah: ${l.murojaah.map(m=>esc(rangeText(m))).join(", ")}</span>`:""}
-    ${l.catatanGuru?`<br><span class="hint">Guru: ${esc(l.catatanGuru)}</span>`:""}
+    <span>${l.setor?`<b>${esc(rangeText(l.setor))}</b>${l.halaman?` <span class="hint">hlm ${esc(l.halaman)}</span>`:""}`:`<span style="color:var(--bad)">Tidak setor</span>${l.alasan?" · "+esc(l.alasan):""}`}
+    ${l.murojaah&&l.murojaah.length?`<br><span class="hint">Murojaah: ${l.murojaah.map(m=>`${srcTag(m.sumber)} ${esc(rangeText(m))}${m.lancar&&m.lancar!=="Lancar"?" ("+esc(m.lancar.toLowerCase())+")":""}`).join(", ")}</span>`:""}
+    ${l.catatanGuru?`<br><span class="hint">Tajwid (guru): ${esc(l.catatanGuru)}</span>`:""}
     ${l.catatanRumah?`<br><span class="hint">Rumah: ${esc(l.catatanRumah)}</span>`:""}</span>
-    <span>${l.lancar?`<span class="pill ${l.lancar==="Lancar"?"ok":l.lancar==="Ulang"?"low":"mid"}">${esc(l.lancar)}</span>`:""}</span></div>`).join("");
+    <span>${predPill(l.lancar)}</span></div>`).join("");
   const waBtn=isGuru()?`<button class="btn wa" type="button" data-wa="${esc(k.id)}">${k.noWa?"Kirim ke orang tua (WA)":"Kirim laporan ke WA"}</button>`
     :(S.kids.length>1?`<button class="btn ghost" type="button" data-wa="${esc(k.id)}">Kirim laporan ${esc(k.nama)} ke WA</button>`:"");
   return`<section class="card"${compact?' style="border-color:var(--accent)"':""}>
     <div class="sec"><h2>${esc(k.nama)}</h2><span class="hint">${esc(k.kelas||"")}${compact?` · <button class="btn ghost" type="button" data-open="" style="padding:2px 10px">Tutup</button>`:""}</span></div>
-    <div><div class="hint">Hafalan terakhir</div><div class="pos">${st.last?esc(rangeText(st.last.setor)):"Belum ada setoran"}</div>
-      <div class="hint">${st.last?"disetor "+fmtLong(st.last.date):""}</div></div>
+    <div><div class="hint">Hafalan terakhir</div><div class="pos">${st.last?esc(posText(st.last)):"Belum ada setoran"}</div>
+      <div class="hint">${st.last?(st.last.date?"disetor "+fmtLong(st.last.date)+" · ":"")+"Juz "+juzOf(+st.last.setor.surat,+st.last.setor.sampai):""}</div>
+      ${st.tg?`<div class="hint">Target berikutnya: <b>${esc(targetText(st.tg))}</b>${st.tg.ulang?" (ulang)":""}</div>`:""}</div>
     ${k.catatanTarget?`<div class="note"><b>Target:</b> ${esc(k.catatanTarget)}</div>`:""}
-    ${metric("Setoran minggu ini",st.sW,k.targetMinggu||0,"ayat",wFrac)}
-    ${metric("Setoran "+BULAN[d.getMonth()],st.sM,k.targetBulan||0,"ayat",mFrac)}
+    ${k.targetMinggu?metric("Setoran minggu ini",st.sW,k.targetMinggu,"ayat",wFrac):""}
+    ${k.targetBulan?metric("Setoran "+BULAN[d.getMonth()],st.sM,k.targetBulan,"ayat",mFrac):""}
+    ${rekapTable(st,d)}
+    ${perluHtml(k)}
     <div class="metric"><div class="top"><span>Murojaah minggu ini${tm?` (≥${tm} ayat/hari)`:""}</span><span><span class="num">${st.murMetW}</span> / ${st.daysSoFar} hari ${st.murMetW>=st.daysSoFar?'<span class="pill ok">Rutin</span>':(st.murMetW>0&&st.murMetW>=st.daysSoFar-1)?'<span class="pill mid">Hampir</span>':'<span class="pill low">Kurang</span>'}</span></div>
       <div class="week">${weekDots(k,st.ws,t)}</div>
       <div class="hint" style="display:flex;gap:12px;flex-wrap:wrap"><span><span class="dot ok"></span> setor + murojaah</span><span><span class="dot half"></span> sebagian</span><span><span class="dot no"></span> tidak setor</span></div></div>
-    ${st.guru?`<div class="hint">Catatan guru terakhir (${fmtDate(st.guru.date)}): <b>${esc(st.guru.catatanGuru)}</b></div>`:""}
+    ${st.guru?`<div class="hint">Catatan tajwid terakhir (${fmtDate(st.guru.date)}): <b>${esc(st.guru.catatanGuru)}</b></div>`:""}
     ${waBtn?`<div class="btns">${waBtn}</div>`:""}
     <details><summary class="hint" style="cursor:pointer">Riwayat 10 catatan terakhir</summary><div class="hist">${hist||'<p class="hint">Belum ada catatan.</p>'}</div></details>
   </section>`;
@@ -389,7 +493,7 @@ function renderProgres(){
       const pill=tw?(st.sW>=tw?'<span class="pill ok">Tercapai</span>':st.sW>=Math.floor(tw*wFrac)?'<span class="pill mid">Jalur</span>':'<span class="pill low">Kejar</span>'):"";
       if(S.openKid===k.id)return kidCard(k,wFrac,mFrac,true);
       return`<button type="button" class="rk" data-open="${esc(k.id)}"><span class="dot ${st2}"></span>
-        <span class="rk-main"><b>${esc(k.nama)}</b><span class="hint">${st.last?esc(rangeText(st.last.setor)):"Belum ada setoran"}</span></span>
+        <span class="rk-main"><b>${esc(k.nama)}</b><span class="hint">${st.last?esc(posText(st.last)):"Belum ada setoran"}</span></span>
         <span class="rk-num"><span><span class="num">${st.sW}${tw?"/"+tw:""}</span> ayat</span>${pill}<span class="hint">murojaah ${st.murMetW}/${st.daysSoFar} hari</span></span></button>`}).join("");
     body=`<div class="card" style="gap:0;padding:4px 12px"><div class="rk-head hint"><span></span><span>Minggu ini · ketuk nama untuk detail</span></div>${rows}</div>`;
   }else body=vk.map(k=>kidCard(k,wFrac,mFrac,false)).join("");
@@ -403,18 +507,21 @@ function waReport(kidId){
   if(kids.length>3){
     /* rekap kelas: satu baris per murid supaya tidak kepanjangan */
     kids.forEach((k,i)=>{const st=kidStats(k);
-      s+=`\n${i+1}. *${k.nama}* — ${st.last?rangeText(st.last.setor):"belum ada setoran"}; setor ${st.sW}${k.targetMinggu?"/"+k.targetMinggu:""} ayat; murojaah ${st.murMetW}/${st.daysSoFar} hari`});
+      s+=`\n${i+1}. *${k.nama}* — ${st.last?posText(st.last):"belum ada setoran"}; setor ${st.sW}${k.targetMinggu?"/"+k.targetMinggu:""} ayat; murojaah ${st.murMetW}/${st.daysSoFar} hari`});
     return s;
   }
   kids.forEach(k=>{const st=kidStats(k);
     s+=`\n*${k.nama}*${k.kelas?" ("+k.kelas+")":""}\n`;
-    s+=`• Hafalan terakhir: ${st.last?rangeText(st.last.setor)+" ("+fmtDate(st.last.date)+")":"belum ada"}\n`;
+    s+=`• Hafalan terakhir: ${st.last?posText(st.last)+(st.last.date?" ("+fmtDate(st.last.date)+")":""):"belum ada"}\n`;
+    if(st.tg)s+=`• Target berikutnya: ${targetText(st.tg)}${st.tg.ulang?" (ulang)":""}\n`;
     s+=`• Setoran minggu ini: ${st.sW}${k.targetMinggu?" / "+k.targetMinggu:""} ayat\n`;
     s+=`• Setoran ${BULAN[d.getMonth()]}: ${st.sM}${k.targetBulan?" / "+k.targetBulan:""} ayat\n`;
     s+=`• Murojaah sesuai target: ${st.murMetW} dari ${st.daysSoFar} hari\n`;
     const today=S.logs[logId(k.id,t)];
-    if(today&&today.lancar)s+=`• Kelancaran hari ini: ${today.lancar}\n`;
-    if(st.guru)s+=`• Catatan guru (${fmtDate(st.guru.date)}): ${st.guru.catatanGuru}\n`;
+    if(today&&today.lancar)s+=`• Predikat setoran hari ini: ${today.lancar}\n`;
+    const ss=suratStatus(k),perlu=[...new Set([...ss.lemah,...ss.stale].map(x=>suratBy(x.surat).nama))].slice(0,5);
+    if(perlu.length)s+=`• Perlu murojaah: ${perlu.join(", ")}\n`;
+    if(st.guru)s+=`• Catatan tajwid guru (${fmtDate(st.guru.date)}): ${st.guru.catatanGuru}\n`;
     if(k.catatanTarget)s+=`• Target: ${k.catatanTarget}\n`;
   });
   return s;
@@ -444,7 +551,10 @@ function kidFields(k){const p="k-"+(k.id||"new")+"-";return`
    <div class="grid2"><label>Target setoran per minggu (ayat)<input type="number" inputmode="numeric" min="0" id="${p}targetMinggu" value="${esc(k.targetMinggu)}"></label>
    <label>Target setoran per bulan (ayat)<input type="number" inputmode="numeric" min="0" id="${p}targetBulan" value="${esc(k.targetBulan)}"></label></div>
    <label>Target murojaah per hari (ayat)<input type="number" inputmode="numeric" min="0" id="${p}targetMurojaah" value="${esc(k.targetMurojaah)}"></label>
-   <label>Target hafalan periode ini<input id="${p}catatanTarget" value="${esc(k.catatanTarget)}" placeholder="mis. Oktober: selesai Al-Gasyiyah dan Al-A'la"></label>`}
+   <label>Target hafalan periode ini<input id="${p}catatanTarget" value="${esc(k.catatanTarget)}" placeholder="mis. Oktober: selesai Al-Gasyiyah dan Al-A'la"></label>
+   <div class="grid2"><label>Sudah hafal sebelum pakai aplikasi, sampai surat<select id="${p}awalSurat">${suratOptions(k.awal&&k.awal.surat,"Belum ada")}</select></label>
+   <label>sampai ayat (kosongkan kalau surat penuh)<input type="number" inputmode="numeric" min="1" id="${p}awalAyat" value="${esc(k.awal&&k.awal.ayat||"")}"></label></div>
+   <p class="hint">Dihitung dari An-Nas mundur sampai surat ini. Dipakai sebagai posisi awal dan daftar "perlu murojaah".</p>`}
 function kidForm(k){return`<div class="card">${kidFields(k)}
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" type="button" data-savekid="${esc(k.id)}">Simpan</button>
   ${S.confirmDel===k.id?`<span class="confirm">Hapus ${esc(k.nama)} beserta semua catatannya? <button class="btn danger" type="button" data-delkid-yes="${esc(k.id)}">Ya, hapus</button><button class="btn ghost" type="button" data-delkid-no>Batal</button></span>`
@@ -452,7 +562,9 @@ function kidForm(k){return`<div class="card">${kidFields(k)}
 function saveKid(id){
   const p="k-"+(id||"new")+"-",v=n=>document.getElementById(p+n).value.trim();
   const nama=v("nama");if(!nama){toast("Nama "+W().one+" belum diisi");return}
-  const body={nama,kelas:v("kelas"),noWa:isGuru()?v("noWa"):((S.kids.find(k=>k.id===id)||{}).noWa||""),targetMinggu:+v("targetMinggu")||0,targetBulan:+v("targetBulan")||0,targetMurojaah:+v("targetMurojaah")||0,catatanTarget:v("catatanTarget")};
+  const as=+v("awalSurat")||0,aa=+v("awalAyat")||0;
+  if(as&&aa>suratBy(as).ayat){toast(`${suratBy(as).nama} cuma ${suratBy(as).ayat} ayat`);return}
+  const body={nama,kelas:v("kelas"),noWa:isGuru()?v("noWa"):((S.kids.find(k=>k.id===id)||{}).noWa||""),targetMinggu:+v("targetMinggu")||0,targetBulan:+v("targetBulan")||0,targetMurojaah:+v("targetMurojaah")||0,catatanTarget:v("catatanTarget"),awal:as?{surat:as,ayat:aa}:null};
   const before=S.kids.map(k=>({...k}));
   if(id){const i=S.kids.findIndex(k=>k.id===id);S.kids[i]={...S.kids[i],...body}}
   else{const nid=(nama.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,30)||"anak")+"-"+Date.now().toString(36);
@@ -622,7 +734,7 @@ function render(){
   renderBanner();
 }
 function updateLabels(){$("#tab-target").textContent=W().One}
-function go(tab){S.tab=tab;S.form=null;S.confirmDel=null;render();window.scrollTo({top:0});try{localStorage.setItem("tab",S.tab)}catch(_){}}
+function go(tab){S.tab=tab;S.form=null;S.confirmDel=null;render();window.scrollTo({top:0})}
 document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)go(b.dataset.tab)});
 $("#banner").addEventListener("click",e=>{const t=e.target.closest("button");if(!t)return;
   if(t.dataset.goto)go(t.dataset.goto);
@@ -637,8 +749,19 @@ view.addEventListener("click",e=>{
   if(t.dataset.group!==undefined){S.group=t.dataset.group;S.form=null;S.openKid=null;render();return}
   if(t.dataset.open!==undefined){S.openKid=t.dataset.open||null;renderProgres();return}
   if(t.dataset.kid){S.kidId=t.dataset.kid;S.form=null;renderIsi();return}
-  if(t.id==="mur-add"){S.form.murojaah.push({surat:"",dari:"",sampai:""});renderMurRows();updateSums();return}
-  if(t.dataset.del!==undefined){S.form.murojaah.splice(+t.dataset.del,1);if(!S.form.murojaah.length)S.form.murojaah.push({surat:"",dari:"",sampai:""});renderMurRows();updateSums();return}
+  if(t.dataset.addmur){const[kid,s]=t.dataset.addmur.split("|");
+    if(kid!==S.kidId){S.kidId=kid;S.form=null;loadForm()}
+    const rows=S.form.murojaah,row={...emptyMur(),surat:+s,dari:1,sampai:suratBy(+s).ayat},blank=rows.find(r=>!r.surat);
+    if(!rows.some(r=>+r.surat===+s)){if(blank)Object.assign(blank,row);else rows.push(row);S.form.dirty=true}
+    renderIsi();$("#mur-rows").scrollIntoView({block:"center",behavior:"smooth"});return}
+  if(t.id==="f-filltarget"){const tg=nextTarget(S.kids.find(k=>k.id===S.kidId),S.date);
+    S.form.setor={surat:tg.surat,dari:tg.dari,sampai:tg.sampai};S.form.dirty=true;
+    $("#f-s-surat").value=tg.surat;$("#f-s-dari").value=tg.dari;$("#f-s-sampai").value=tg.sampai;updateSums();return}
+  if(t.dataset.rv!==undefined){const r=t.closest("[data-i]"),g=t.closest("[data-g]").dataset.g,m=S.form.murojaah[+r.dataset.i];
+    m[g]=g==="lancar"&&m[g]===t.dataset.rv?"":t.dataset.rv;S.form.dirty=true;
+    t.parentNode.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.rv===m[g]));return}
+  if(t.id==="mur-add"){S.form.murojaah.push(emptyMur());renderMurRows();updateSums();return}
+  if(t.dataset.del!==undefined){S.form.murojaah.splice(+t.dataset.del,1);if(!S.form.murojaah.length)S.form.murojaah.push(emptyMur());renderMurRows();updateSums();return}
   if(t.closest("#f-lancar")){S.form.dirty=true;S.form.lancar=S.form.lancar===t.dataset.v?"":t.dataset.v;t.parentNode.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===S.form.lancar));return}
   if(t.id==="f-save"){save();return}
   if(t.dataset.wa!==undefined){sendWa(t.dataset.wa);return}
@@ -660,6 +783,7 @@ view.addEventListener("input",e=>{
   const map={"f-s-dari":"dari","f-s-sampai":"sampai"};
   if(map[t.id]){f.setor[map[t.id]]=t.value;updateSums();return}
   if(t.id==="f-alasan"){f.alasan=t.value;return}
+  if(t.id==="f-halaman"){f.halaman=t.value;return}
   if(t.id==="f-guru"){f.catatanGuru=t.value;return}
   if(t.id==="f-rumah"){f.catatanRumah=t.value;return}
   const r=t.closest("[data-i]");if(r&&t.dataset.f&&t.tagName==="INPUT"){f.murojaah[+r.dataset.i][t.dataset.f]=t.value;updateSums()}
@@ -679,7 +803,7 @@ window.addEventListener("storage",e=>{if(e.key===KEY||e.key===META_KEY){loadAll(
 
 $("#today-line").textContent=fmtLong(todayStr());
 loadAll();updateLabels();
-try{const t=localStorage.getItem("tab");if(t&&["isi","progres","target","data"].includes(t))S.tab=t}catch(_){}
+/* selalu buka di "Hari ini" supaya posisi terakhir tiap anak langsung kelihatan */
 if(!S.kids.length&&!S.storageError)S.tab="target";
 render();
 loadGis();
