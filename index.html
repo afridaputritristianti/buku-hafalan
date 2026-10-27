@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Buku Hafalan Anak</title>
+<meta name="description" content="Catat setoran dan murojaah hafalan Qur'an anak setiap hari. Gratis, tanpa daftar, data tersimpan di HP kamu sendiri.">
+<meta name="theme-color" content="#16695a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hafalan Anak">
+<meta property="og:title" content="Buku Hafalan Anak">
+<meta property="og:description" content="Catat setoran dan murojaah hafalan Qur'an anak. Gratis, tanpa daftar, data tersimpan di HP sendiri.">
+<meta property="og:image" content="icons/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Lora:wght@600&display=swap">
+<style>
+/* Layout: satu kolom ala buku setoran, tab di atas, kartu per anak */
+:root{
+  --bg:#f5f8f6; --surface:#ffffff; --ink:#17302a; --muted:#5d716b; --line:#d7e2dd;
+  --accent:#16695a; --accent-soft:#dcefe9; --gold:#b7791f; --gold-soft:#fbefd9;
+  --good:#2f855a; --warn:#c05621; --bad:#c53030; --empty:#e3eae7;
+  --f-display:"Lora",Georgia,serif; --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1a17; --surface:#16241f; --ink:#e4eeea; --muted:#9db1aa; --line:#2a3d36;
+  --accent:#5cc4ad; --accent-soft:#1d3b33; --gold:#e3a94f; --gold-soft:#3a2e18;
+  --good:#5fcf93; --warn:#f0965a; --bad:#f07a7a; --empty:#24352f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1a17; --surface:#16241f; --ink:#e4eeea; --muted:#9db1aa; --line:#2a3d36;
+  --accent:#5cc4ad; --accent-soft:#1d3b33; --gold:#e3a94f; --gold-soft:#3a2e18;
+  --good:#5fcf93; --warn:#f0965a; --bad:#f07a7a; --empty:#24352f; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:580px;margin:0 auto;padding-block:calc(16px + env(safe-area-inset-top,0px)) 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--f-display);font-size:24px;margin:0;text-wrap:balance}
+h2{font-size:16px;margin:0}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px}
+.tabs button{border:0;background:transparent;color:var(--muted);font:600 14px var(--f-body);padding:10px 4px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--surface)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;font:600 14px var(--f-body);cursor:pointer;display:flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--empty);display:inline-block;flex:none}
+.dot.ok{background:var(--good)}.dot.half{background:var(--gold)}.dot.no{background:var(--bad)}
+label{font-size:13px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;gap:4px;min-width:0}
+input,select,textarea{font:16px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px;width:100%;min-width:0}
+textarea{min-height:60px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:2.4fr .8fr .8fr;gap:8px;align-items:end}
+.row4{display:grid;grid-template-columns:2.4fr .8fr .8fr auto;gap:8px;align-items:end}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+.sec{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.hint b{color:var(--ink)}
+.btn{border:0;border-radius:10px;padding:12px 16px;font:700 15px var(--f-body);cursor:pointer;background:var(--accent);color:var(--surface)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line);padding:8px 12px;font-size:14px}
+.btn.x{background:transparent;color:var(--muted);border:1px solid var(--line);padding:9px 11px;font-size:14px}
+.btn.danger{background:transparent;color:var(--bad);border:1px solid var(--line);padding:8px 12px;font-size:14px}
+.btn.wa{background:#1f8f4e;color:#fff}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:8px 12px;font:600 14px var(--f-body);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-weight:500}
+.check input{width:20px;height:20px}
+.sum{display:flex;gap:8px;align-items:center;font-size:14px;background:var(--accent-soft);color:var(--accent);padding:8px 12px;border-radius:9px;font-weight:600}
+.bar{height:10px;background:var(--empty);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.bar.gold>i{background:var(--gold)}
+.metric{display:flex;flex-direction:column;gap:6px}
+.metric .top{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.num{font-variant-numeric:tabular-nums;font-weight:700}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.pill.ok{background:var(--accent-soft);color:var(--good)}
+.pill.mid{background:var(--gold-soft);color:var(--gold)}
+.pill.low{background:var(--gold-soft);color:var(--warn)}
+.pill.none{background:var(--empty);color:var(--muted)}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:11px;color:var(--muted)}
+.week span{display:flex;flex-direction:column;align-items:center;gap:4px}
+.week i{width:22px;height:22px;border-radius:7px;background:var(--empty);display:block}
+.week i.ok{background:var(--good)}.week i.half{background:var(--gold)}.week i.no{background:var(--bad)}.week i.fut{background:transparent;border:1px dashed var(--line)}
+.week i.today{outline:2px solid var(--ink);outline-offset:1px}
+.pos{font-family:var(--f-display);font-size:18px}
+.hist{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.hist div{display:grid;grid-template-columns:62px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:start}
+.hist div>*{min-width:0}
+.hist .d{color:var(--muted);font-variant-numeric:tabular-nums}
+.note{background:var(--gold-soft);color:var(--ink);border-radius:9px;padding:8px 12px;font-size:13px}
+.banner{background:var(--gold-soft);border-radius:10px;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:8px}
+.welcome{background:var(--accent-soft);border-color:transparent}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:600;font-size:14px;z-index:20;max-width:calc(100% - 32px);text-align:center}
+.empty{color:var(--muted);text-align:center;padding:24px 8px}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.confirm-box{border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.rk{all:unset;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;width:100%}
+.rk:last-child{border-bottom:0}
+.rk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rk-main{display:flex;flex-direction:column;min-width:0}
+.rk-num{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:13px}
+.rk-head{padding:8px 0;border-bottom:1px solid var(--line)}
+footer{text-align:center;font-size:12px;color:var(--muted)}
+footer a{color:var(--muted)}
+ol.steps{margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+@media (prefers-reduced-motion:no-preference){.bar>i{transition:width .4s ease}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Buku Hafalan Anak</h1>
+    <p class="sub" id="today-line"></p>
+  </header>
+  <div id="banner" class="banner" hidden></div>
+  <nav class="tabs" role="tablist">
+    <button id="tab-isi" role="tab" aria-selected="true" data-tab="isi">Hari ini</button>
+    <button id="tab-progres" role="tab" aria-selected="false" data-tab="progres">Progres</button>
+    <button id="tab-target" role="tab" aria-selected="false" data-tab="target">Anak</button>
+    <button id="tab-data" role="tab" aria-selected="false" data-tab="data">Backup</button>
+  </nav>
+  <main id="view"></main>
+  <footer>Data tersimpan di perangkat ini saja · <a href="privasi.html">Kebijakan privasi</a></footer>
+</div>
+<div id="toast" class="toast" hidden></div>
+<input type="file" id="restore-file" accept=".json,application/json" hidden>
+
+<script>
+/* ====== PENGATURAN ======
+   Isi dengan OAuth Client ID dari Google Cloud Console (tipe "Web application")
+   supaya tombol "Simpan ke Google Drive" aktif. Kosongkan kalau belum. */
+const GOOGLE_CLIENT_ID="";
+const DRIVE_FILE_NAME="Buku Hafalan Anak - backup.json";
+const BACKUP_DAYS=7;
+/* ======================== */
+
+const SURAT="Al-Fatihah 7|Al-Baqarah 286|Ali Imran 200|An-Nisa 176|Al-Maidah 120|Al-An'am 165|Al-A'raf 206|Al-Anfal 75|At-Taubah 129|Yunus 109|Hud 123|Yusuf 111|Ar-Ra'd 43|Ibrahim 52|Al-Hijr 99|An-Nahl 128|Al-Isra 111|Al-Kahfi 110|Maryam 98|Taha 135|Al-Anbiya 112|Al-Hajj 78|Al-Mu'minun 118|An-Nur 64|Al-Furqan 77|Asy-Syu'ara 227|An-Naml 93|Al-Qasas 88|Al-Ankabut 69|Ar-Rum 60|Luqman 34|As-Sajdah 30|Al-Ahzab 73|Saba 54|Fatir 45|Yasin 83|As-Saffat 182|Sad 88|Az-Zumar 75|Gafir 85|Fussilat 54|Asy-Syura 53|Az-Zukhruf 89|Ad-Dukhan 59|Al-Jasiyah 37|Al-Ahqaf 35|Muhammad 38|Al-Fath 29|Al-Hujurat 18|Qaf 45|Az-Zariyat 60|At-Tur 49|An-Najm 62|Al-Qamar 55|Ar-Rahman 78|Al-Waqi'ah 96|Al-Hadid 29|Al-Mujadilah 22|Al-Hasyr 24|Al-Mumtahanah 13|As-Saff 14|Al-Jumu'ah 11|Al-Munafiqun 11|At-Tagabun 18|At-Talaq 12|At-Tahrim 12|Al-Mulk 30|Al-Qalam 52|Al-Haqqah 52|Al-Ma'arij 44|Nuh 28|Al-Jinn 28|Al-Muzzammil 20|Al-Muddassir 56|Al-Qiyamah 40|Al-Insan 31|Al-Mursalat 50|An-Naba 40|An-Nazi'at 46|Abasa 42|At-Takwir 29|Al-Infitar 19|Al-Mutaffifin 36|Al-Insyiqaq 25|Al-Buruj 22|At-Tariq 17|Al-A'la 19|Al-Gasyiyah 26|Al-Fajr 30|Al-Balad 20|Asy-Syams 15|Al-Lail 21|Ad-Duha 11|Asy-Syarh 8|At-Tin 8|Al-Alaq 19|Al-Qadr 5|Al-Bayyinah 8|Az-Zalzalah 8|Al-Adiyat 11|Al-Qari'ah 11|At-Takasur 8|Al-Asr 3|Al-Humazah 9|Al-Fil 5|Quraisy 4|Al-Ma'un 7|Al-Kausar 3|Al-Kafirun 6|An-Nasr 3|Al-Lahab 5|Al-Ikhlas 4|Al-Falaq 5|An-Nas 6".split("|").map((s,i)=>{const k=s.lastIndexOf(" ");return{no:i+1,nama:s.slice(0,k),ayat:+s.slice(k+1)}});
+const HARI=["Sen","Sel","Rab","Kam","Jum","Sab","Min"];
+const BULAN=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+const LANCAR=["Lancar","Kurang lancar","Ulang"];
+
+const S={kids:[],logs:{},tab:"isi",kidId:null,date:todayStr(),form:null,confirmDel:null,pendingRestore:null,busy:"",group:"",openKid:null,justSaved:false};
+/* label menyesuaikan pemakai: guru (banyak murid) atau orang tua */
+const isGuru=()=>META.mode==="guru";
+const W=()=>isGuru()?{one:"murid",One:"Murid"}:{one:"anak",One:"Anak"};
+function groups(){return[...new Set(S.kids.map(k=>(k.kelas||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"id",{numeric:true}))}
+function visibleKids(){const g=groups();if(!S.group||!g.includes(S.group))return S.kids;return S.kids.filter(k=>(k.kelas||"").trim()===S.group)}
+function groupBar(){const g=groups();if(g.length<2)return"";
+  return`<div class="chips" id="groupbar">${["",...g].map(x=>`<button class="chip" data-group="${esc(x)}" aria-pressed="${(S.group||"")===x}">${x?esc(x):"Semua"}</button>`).join("")}</div>`}
+function waNumber(s){let d=String(s||"").replace(/\D/g,"");if(!d)return"";if(d.startsWith("0"))d="62"+d.slice(1);else if(d.startsWith("8"))d="62"+d;return d}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function todayStr(){const d=new Date();return ymd(d)}
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parse(s){const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}
+function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return ymd(d)}
+function weekStart(s){const d=parse(s);const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return ymd(d)}
+function fmtDate(s){const d=parse(s);return d.getDate()+" "+BULAN[d.getMonth()].slice(0,3)}
+function fmtLong(s){const d=parse(s);return ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"][d.getDay()]+", "+d.getDate()+" "+BULAN[d.getMonth()]+" "+d.getFullYear()}
+function fmtStamp(iso){if(!iso)return"";const d=new Date(iso);return d.getDate()+" "+BULAN[d.getMonth()].slice(0,3)+" "+d.getFullYear()+", "+String(d.getHours()).padStart(2,"0")+"."+String(d.getMinutes()).padStart(2,"0")}
+function daysAgo(iso){return Math.floor((Date.now()-new Date(iso).getTime())/864e5)}
+function agoText(iso){const n=daysAgo(iso);return n<=0?"hari ini":n===1?"kemarin":n+" hari lalu"}
+const suratBy=no=>SURAT[no-1];
+const logId=(k,d)=>k+"__"+d;
+function kidLogs(k){return Object.values(S.logs).filter(l=>l.kidId===k).sort((a,b)=>a.date<b.date?-1:1)}
+function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2600)}
+
+/* ---------- penyimpanan lokal (di HP pengguna) ---------- */
+const KEY="buku-hafalan-v1",META_KEY="buku-hafalan-meta";
+let META={};
+function loadAll(){
+  try{const raw=localStorage.getItem(KEY);if(raw){const d=JSON.parse(raw);S.kids=Object.entries(d.kids||{}).map(([id,k])=>({id,...k}));S.logs=d.logs||{}}}catch(_){S.storageError=true}
+  try{META=JSON.parse(localStorage.getItem(META_KEY)||"{}")}catch(_){META={}}
+  if(!META.createdAt){META.createdAt=new Date().toISOString();saveMeta()}
+  sortKids();
+}
+function sortKids(){S.kids.sort((a,b)=>(a.urut||0)-(b.urut||0))}
+function snapshot(){const kids={};S.kids.forEach(({id,...k})=>kids[id]=k);return{kids,logs:S.logs}}
+function persist(){
+  try{localStorage.setItem(KEY,JSON.stringify(snapshot()));META.lastChange=new Date().toISOString();saveMeta();return true}
+  catch(e){toast("Gagal menyimpan. Memori browser mungkin penuh.");return false}
+}
+function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify(META))}catch(_){}}
+const hasData=()=>S.kids.length>0||Object.keys(S.logs).length>0;
+
+/* ---------- status per hari ---------- */
+function dayStatus(kid,log){
+  if(!log)return"";
+  const okS=log.setorAyat>0, okM=(kid.targetMurojaah||0)===0?log.murojaahAyat>0:log.murojaahAyat>=kid.targetMurojaah;
+  if(okS&&okM)return"ok"; if(okS||log.murojaahAyat>0)return"half"; return"no";
+}
+
+/* ---------- ISI ---------- */
+function lastSetor(kidId,before){
+  const l=kidLogs(kidId).filter(x=>x.setor&&x.setor.surat&&(!before||x.date<before));return l[l.length-1];
+}
+function blankForm(){
+  const prev=lastSetor(S.kidId,S.date);let setor={surat:"",dari:"",sampai:""};
+  if(prev){const s=prev.setor,su=suratBy(s.surat);
+    if(+s.sampai<su.ayat)setor={surat:s.surat,dari:+s.sampai+1,sampai:""};
+    else if(s.surat>1)setor={surat:+s.surat-1,dari:1,sampai:""};}
+  return{setor,tidakSetor:false,alasan:"",murojaah:[{surat:"",dari:"",sampai:""}],lancar:"",catatanGuru:"",catatanRumah:"",existing:false};
+}
+function loadForm(){
+  const l=S.logs[logId(S.kidId,S.date)];
+  if(l){S.form={setor:l.setor?{...l.setor}:{surat:"",dari:"",sampai:""},tidakSetor:!!l.tidakSetor,alasan:l.alasan||"",
+    murojaah:(l.murojaah&&l.murojaah.length?l.murojaah.map(m=>({...m})):[{surat:"",dari:"",sampai:""}]),lancar:l.lancar||"",
+    catatanGuru:l.catatanGuru||"",catatanRumah:l.catatanRumah||"",existing:true};}
+  else S.form=blankForm();
+}
+function renderIsi(){
+  if(!S.kids.length){$("#view").innerHTML=`<div class="card empty">Belum ada data ${W().one}. Tambahkan dulu di tab <b>${W().One}</b>.<br><br><button class="btn" type="button" data-goto="target">Tambah ${W().one}</button></div>`;return}
+  const vk=visibleKids();
+  if(!vk.find(k=>k.id===S.kidId)){S.kidId=vk[0].id;S.form=null}
+  if(!S.form)loadForm();
+  const kid=S.kids.find(k=>k.id===S.kidId),f=S.form;
+  const prev=lastSetor(S.kidId,S.date);
+  $("#view").innerHTML=`
+  <div style="display:flex;flex-direction:column;gap:12px">
+   <div class="card">
+    ${groupBar()}
+    <div class="chips" id="kidchips">${chipsHtml()}</div>
+    ${isGuru()?`<p class="hint" id="done-line">${doneLine()}</p>`:""}
+    <label>Tanggal<input type="date" id="f-date" value="${S.date}" max="${todayStr()}"></label>
+    <p class="hint" id="f-prev">${prev?`Setoran sebelumnya: <b>${esc(rangeText(prev.setor))}</b> (${fmtDate(prev.date)})`:"Belum ada setoran sebelumnya."}${f.existing?` · <b>Mengedit catatan tanggal ini</b>`:""}</p>
+   </div>
+
+   <div class="card">
+    <div class="sec"><h2>Setoran baru</h2><span class="hint">${kid.targetMinggu?`target ${kid.targetMinggu} ayat/minggu`:""}</span></div>
+    <label class="check"><input type="checkbox" id="f-tidak"${f.tidakSetor?" checked":""}> Hari ini tidak setor</label>
+    <div id="setor-box"${f.tidakSetor?" hidden":""}>
+      <div class="row">
+        <label>Surat<select id="f-s-surat">${suratOptions(f.setor.surat)}</select></label>
+        <label>Ayat dari<input type="number" inputmode="numeric" min="1" id="f-s-dari" value="${esc(f.setor.dari)}"></label>
+        <label>sampai<input type="number" inputmode="numeric" min="1" id="f-s-sampai" value="${esc(f.setor.sampai)}"></label>
+      </div>
+    </div>
+    <label id="alasan-box"${f.tidakSetor?"":" hidden"}>Alasan<input id="f-alasan" value="${esc(f.alasan)}" placeholder="mis. sakit, libur, belum siap"></label>
+    <div class="sum" id="setor-sum"></div>
+   </div>
+
+   <div class="card">
+    <div class="sec"><h2>Murojaah hari ini</h2><span class="hint">${kid.targetMurojaah?`target ${kid.targetMurojaah} ayat/hari`:""}</span></div>
+    <div id="mur-rows" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div><button class="btn ghost" id="mur-add" type="button">+ Tambah surat murojaah</button></div>
+    <div class="sum" id="mur-sum"></div>
+   </div>
+
+   <div class="card">
+    <h2>Kelancaran &amp; catatan</h2>
+    <div class="seg" id="f-lancar">${LANCAR.map(x=>`<button type="button" data-v="${x}" aria-pressed="${f.lancar===x}">${x}</button>`).join("")}</div>
+    <label>Catatan guru<textarea id="f-guru" placeholder="Salin dari catatan yang dishare guru">${esc(f.catatanGuru)}</textarea></label>
+    <label>Catatan rumah<textarea id="f-rumah" placeholder="mis. ayat 18 masih tertukar">${esc(f.catatanRumah)}</textarea></label>
+   </div>
+   <p class="hint" id="f-err" style="color:var(--bad)" hidden></p>
+   <button class="btn" id="f-save" type="button">${f.existing?"Simpan perubahan":"Simpan catatan hari ini"}</button>
+   <div id="next-box"></div>
+  </div>`;
+  renderMurRows();updateSums();
+}
+function suratOptions(sel){
+  let o='<option value="">Pilih surat</option><optgroup label="Juz 30 (dari An-Nas)">';
+  for(let n=114;n>=78;n--)o+=`<option value="${n}"${+sel===n?" selected":""}>${n}. ${esc(suratBy(n).nama)}</option>`;
+  o+='</optgroup><optgroup label="Surat lainnya">';
+  for(let n=77;n>=1;n--)o+=`<option value="${n}"${+sel===n?" selected":""}>${n}. ${esc(suratBy(n).nama)}</option>`;
+  return o+"</optgroup>";
+}
+const rangeAyat=r=>(r&&r.surat&&r.dari&&r.sampai&&+r.sampai>=+r.dari)?(+r.sampai-+r.dari+1):0;
+const rangeText=r=>r&&r.surat?`${suratBy(r.surat).nama} ${r.dari}–${r.sampai}`:"";
+function doneLine(){const vk=visibleKids(),n=vk.filter(k=>S.logs[logId(k.id,S.date)]).length;return`Sudah dicatat ${fmtDate(S.date)}: <b>${n} dari ${vk.length}</b> ${W().one}`}
+/* murid berikutnya yang belum dicatat di tanggal ini (urut setelah yang sekarang) */
+function nextKid(){const vk=visibleKids(),i=vk.findIndex(k=>k.id===S.kidId);
+  for(let j=1;j<vk.length;j++){const k=vk[(i+j)%vk.length];if(!S.logs[logId(k.id,S.date)])return k}return null}
+function chipsHtml(){return visibleKids().map(k=>{const st=dayStatus(k,S.logs[logId(k.id,S.date)]);
+  return`<button class="chip" data-kid="${esc(k.id)}" aria-pressed="${k.id===S.kidId}"><span class="dot ${st}"></span>${esc(k.nama)}</button>`}).join("")}
+function renderMurRows(){
+  $("#mur-rows").innerHTML=S.form.murojaah.map((m,i)=>`
+   <div class="row4" data-i="${i}">
+    <label>Surat<select data-f="surat">${suratOptions(m.surat)}</select></label>
+    <label>Dari<input type="number" inputmode="numeric" min="1" data-f="dari" value="${esc(m.dari)}"></label>
+    <label>Sampai<input type="number" inputmode="numeric" min="1" data-f="sampai" value="${esc(m.sampai)}"></label>
+    <button class="btn x" type="button" data-del="${i}" aria-label="Hapus baris">✕</button>
+   </div>`).join("");
+}
+function updateSums(){
+  const f=S.form,kid=S.kids.find(k=>k.id===S.kidId);
+  const sa=f.tidakSetor?0:rangeAyat(f.setor);
+  $("#setor-sum").textContent=f.tidakSetor?"Tidak setor hari ini":(sa?`${sa} ayat disetor`:"Isi surat dan ayat");
+  const ma=f.murojaah.reduce((t,m)=>t+rangeAyat(m),0);
+  const tgt=kid.targetMurojaah||0;
+  $("#mur-sum").textContent=ma?`${ma} ayat murojaah`+(tgt?(ma>=tgt?" · target tercapai":` · kurang ${tgt-ma} ayat dari target`):""):"Belum ada murojaah";
+}
+function validate(){
+  const f=S.form,errs=[];
+  const chk=(r,lbl)=>{if(!r.surat&&!r.dari&&!r.sampai)return;const su=r.surat?suratBy(r.surat):null;
+    if(!su)return errs.push(lbl+": pilih suratnya.");
+    if(!r.dari||!r.sampai)return errs.push(lbl+": isi ayat dari dan sampai.");
+    if(+r.dari<1||+r.sampai<+r.dari)return errs.push(lbl+": ayat 'sampai' harus sama atau lebih besar dari 'dari'.");
+    if(+r.sampai>su.ayat)errs.push(`${lbl}: ${su.nama} cuma ${su.ayat} ayat.`);};
+  if(!f.tidakSetor)chk(f.setor,"Setoran");
+  f.murojaah.forEach((m,i)=>chk(m,"Murojaah baris "+(i+1)));
+  return errs;
+}
+function save(){
+  const errs=validate(),el=$("#f-err");
+  if(errs.length){el.textContent=errs.join(" ");el.hidden=false;return}
+  el.hidden=true;
+  const f=S.form,clean=r=>({surat:+r.surat,dari:+r.dari,sampai:+r.sampai});
+  const setor=(!f.tidakSetor&&f.setor.surat&&f.setor.dari&&f.setor.sampai)?clean(f.setor):null;
+  const mur=f.murojaah.filter(m=>m.surat&&m.dari&&m.sampai).map(clean);
+  const body={kidId:S.kidId,date:S.date,setor,setorAyat:setor?rangeAyat(setor):0,tidakSetor:f.tidakSetor,alasan:f.tidakSetor?f.alasan:"",
+    murojaah:mur,murojaahAyat:mur.reduce((t,m)=>t+rangeAyat(m),0),lancar:f.lancar,catatanGuru:f.catatanGuru,catatanRumah:f.catatanRumah,updatedAt:new Date().toISOString()};
+  const id=logId(S.kidId,S.date),old=S.logs[id];
+  S.logs[id]=body;
+  if(!persist()){if(old)S.logs[id]=old;else delete S.logs[id];return}
+  S.form.existing=true;S.form.dirty=false;
+  toast("Tersimpan");$("#f-save").textContent="Simpan perubahan";$("#kidchips").innerHTML=chipsHtml();renderBanner();
+  if(isGuru()){$("#done-line").innerHTML=doneLine();const nk=nextKid();
+    $("#next-box").innerHTML=nk?`<button class="btn ghost" type="button" data-kid="${esc(nk.id)}" style="width:100%">Lanjut ke ${esc(nk.nama)} →</button>`:`<p class="hint" style="text-align:center">Semua ${W().one} sudah dicatat hari ini ✓</p>`}
+}
+
+/* ---------- PROGRES ---------- */
+function pctPill(val,tgt,elapsedFrac){
+  if(!tgt)return'<span class="pill none">tanpa target</span>';
+  if(val>=tgt)return'<span class="pill ok">Tercapai</span>';
+  if(val>=Math.floor(tgt*elapsedFrac))return'<span class="pill mid">Sesuai jalur</span>';
+  return'<span class="pill low">Perlu dikejar</span>';
+}
+function metric(label,val,tgt,unit,frac,gold){
+  const p=tgt?Math.min(100,Math.round(val/tgt*100)):0;
+  return`<div class="metric"><div class="top"><span>${label}</span><span><span class="num">${val}</span>${tgt?` / ${tgt}`:""} ${unit} ${pctPill(val,tgt,frac)}</span></div>
+  ${tgt?`<div class="bar${gold?" gold":""}"><i style="width:${p}%"></i></div>`:""}</div>`;
+}
+/* angka ringkasan satu anak, dipakai di tab Progres dan laporan WA */
+function kidStats(k){
+  const t=todayStr(),ws=weekStart(t),we=addDays(ws,6),ms=t.slice(0,8)+"01",d=parse(t);
+  const L=kidLogs(k.id),wk=L.filter(l=>l.date>=ws&&l.date<=we),mo=L.filter(l=>l.date>=ms&&l.date<=t);
+  const tm=k.targetMurojaah||0;
+  return{t,ws,we,d,L,
+    sW:wk.reduce((a,l)=>a+(l.setorAyat||0),0),sM:mo.reduce((a,l)=>a+(l.setorAyat||0),0),
+    murMetW:wk.filter(l=>tm?l.murojaahAyat>=tm:l.murojaahAyat>0).length,daysSoFar:((d.getDay()+6)%7)+1,
+    last:lastSetor(k.id),guru:[...L].reverse().find(l=>l.catatanGuru)};
+}
+function weekDots(k,ws,t){return[...Array(7)].map((_,i)=>{const ds=addDays(ws,i),lg=S.logs[logId(k.id,ds)];
+  const cls=ds>t?"fut":dayStatus(k,lg);return`<span><i class="${cls}${ds===t?" today":""}" title="${fmtDate(ds)}"></i>${HARI[i]}</span>`}).join("")}
+function kidCard(k,wFrac,mFrac,compact){
+  const st=kidStats(k),tm=k.targetMurojaah||0,t=st.t,d=st.d;
+  const hist=[...st.L].reverse().slice(0,10).map(l=>`<div><span class="d">${fmtDate(l.date)}</span>
+    <span>${l.setor?`<b>${esc(rangeText(l.setor))}</b>`:`<span style="color:var(--bad)">Tidak setor</span>${l.alasan?" · "+esc(l.alasan):""}`}
+    ${l.murojaah&&l.murojaah.length?`<br><span class="hint">Murojaah: ${l.murojaah.map(m=>esc(rangeText(m))).join(", ")}</span>`:""}
+    ${l.catatanGuru?`<br><span class="hint">Guru: ${esc(l.catatanGuru)}</span>`:""}
+    ${l.catatanRumah?`<br><span class="hint">Rumah: ${esc(l.catatanRumah)}</span>`:""}</span>
+    <span>${l.lancar?`<span class="pill ${l.lancar==="Lancar"?"ok":l.lancar==="Ulang"?"low":"mid"}">${esc(l.lancar)}</span>`:""}</span></div>`).join("");
+  const waBtn=isGuru()?`<button class="btn wa" type="button" data-wa="${esc(k.id)}">${k.noWa?"Kirim ke orang tua (WA)":"Kirim laporan ke WA"}</button>`
+    :(S.kids.length>1?`<button class="btn ghost" type="button" data-wa="${esc(k.id)}">Kirim laporan ${esc(k.nama)} ke WA</button>`:"");
+  return`<section class="card"${compact?' style="border-color:var(--accent)"':""}>
+    <div class="sec"><h2>${esc(k.nama)}</h2><span class="hint">${esc(k.kelas||"")}${compact?` · <button class="btn ghost" type="button" data-open="" style="padding:2px 10px">Tutup</button>`:""}</span></div>
+    <div><div class="hint">Hafalan terakhir</div><div class="pos">${st.last?esc(rangeText(st.last.setor)):"Belum ada setoran"}</div>
+      <div class="hint">${st.last?"disetor "+fmtLong(st.last.date):""}</div></div>
+    ${k.catatanTarget?`<div class="note"><b>Target:</b> ${esc(k.catatanTarget)}</div>`:""}
+    ${metric("Setoran minggu ini",st.sW,k.targetMinggu||0,"ayat",wFrac)}
+    ${metric("Setoran "+BULAN[d.getMonth()],st.sM,k.targetBulan||0,"ayat",mFrac)}
+    <div class="metric"><div class="top"><span>Murojaah minggu ini${tm?` (≥${tm} ayat/hari)`:""}</span><span><span class="num">${st.murMetW}</span> / ${st.daysSoFar} hari ${st.murMetW>=st.daysSoFar?'<span class="pill ok">Rutin</span>':(st.murMetW>0&&st.murMetW>=st.daysSoFar-1)?'<span class="pill mid">Hampir</span>':'<span class="pill low">Kurang</span>'}</span></div>
+      <div class="week">${weekDots(k,st.ws,t)}</div>
+      <div class="hint" style="display:flex;gap:12px;flex-wrap:wrap"><span><span class="dot ok"></span> setor + murojaah</span><span><span class="dot half"></span> sebagian</span><span><span class="dot no"></span> tidak setor</span></div></div>
+    ${st.guru?`<div class="hint">Catatan guru terakhir (${fmtDate(st.guru.date)}): <b>${esc(st.guru.catatanGuru)}</b></div>`:""}
+    ${waBtn?`<div class="btns">${waBtn}</div>`:""}
+    <details><summary class="hint" style="cursor:pointer">Riwayat 10 catatan terakhir</summary><div class="hist">${hist||'<p class="hint">Belum ada catatan.</p>'}</div></details>
+  </section>`;
+}
+function renderProgres(){
+  if(!S.kids.length){$("#view").innerHTML=`<div class="card empty">Belum ada data ${W().one}.<br><br><button class="btn" type="button" data-goto="target">Tambah ${W().one}</button></div>`;return}
+  const t=todayStr(),d=parse(t),dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  const wFrac=(((d.getDay()+6)%7)+1)/7,mFrac=d.getDate()/dim,vk=visibleKids();
+  const multi=vk.length>1;
+  const waAll=`<button class="btn wa" type="button" data-wa="">${isGuru()?"Kirim rekap "+(S.group?esc(S.group):"semua")+" ke WA":"Kirim laporan ke WA"+(multi?" (semua anak)":"")}</button>`;
+  let body;
+  if(vk.length>3){
+    /* banyak murid: rekap ringkas, ketuk nama untuk detail */
+    const rows=vk.map(k=>{const st=kidStats(k),tw=k.targetMinggu||0,st2=dayStatus(k,S.logs[logId(k.id,t)]);
+      const pill=tw?(st.sW>=tw?'<span class="pill ok">Tercapai</span>':st.sW>=Math.floor(tw*wFrac)?'<span class="pill mid">Jalur</span>':'<span class="pill low">Kejar</span>'):"";
+      if(S.openKid===k.id)return kidCard(k,wFrac,mFrac,true);
+      return`<button type="button" class="rk" data-open="${esc(k.id)}"><span class="dot ${st2}"></span>
+        <span class="rk-main"><b>${esc(k.nama)}</b><span class="hint">${st.last?esc(rangeText(st.last.setor)):"Belum ada setoran"}</span></span>
+        <span class="rk-num"><span><span class="num">${st.sW}${tw?"/"+tw:""}</span> ayat</span>${pill}<span class="hint">murojaah ${st.murMetW}/${st.daysSoFar} hari</span></span></button>`}).join("");
+    body=`<div class="card" style="gap:0;padding:4px 12px"><div class="rk-head hint"><span></span><span>Minggu ini · ketuk nama untuk detail</span></div>${rows}</div>`;
+  }else body=vk.map(k=>kidCard(k,wFrac,mFrac,false)).join("");
+  $("#view").innerHTML=`<div style="display:flex;flex-direction:column;gap:12px">${groupBar()}<div class="btns">${waAll}</div>${body}</div>`;
+}
+function waReport(kidId){
+  const kids=kidId?S.kids.filter(k=>k.id===kidId):visibleKids();
+  const t=todayStr(),ws=weekStart(t),d=parse(t);
+  const head=kidId||!isGuru()?"Laporan Hafalan":"Rekap Hafalan"+(S.group?" "+S.group:"");
+  let s=`*${head}* (${fmtDate(ws)} – ${fmtDate(t)} ${d.getFullYear()})\n`;
+  if(kids.length>3){
+    /* rekap kelas: satu baris per murid supaya tidak kepanjangan */
+    kids.forEach((k,i)=>{const st=kidStats(k);
+      s+=`\n${i+1}. *${k.nama}* — ${st.last?rangeText(st.last.setor):"belum ada setoran"}; setor ${st.sW}${k.targetMinggu?"/"+k.targetMinggu:""} ayat; murojaah ${st.murMetW}/${st.daysSoFar} hari`});
+    return s;
+  }
+  kids.forEach(k=>{const st=kidStats(k);
+    s+=`\n*${k.nama}*${k.kelas?" ("+k.kelas+")":""}\n`;
+    s+=`• Hafalan terakhir: ${st.last?rangeText(st.last.setor)+" ("+fmtDate(st.last.date)+")":"belum ada"}\n`;
+    s+=`• Setoran minggu ini: ${st.sW}${k.targetMinggu?" / "+k.targetMinggu:""} ayat\n`;
+    s+=`• Setoran ${BULAN[d.getMonth()]}: ${st.sM}${k.targetBulan?" / "+k.targetBulan:""} ayat\n`;
+    s+=`• Murojaah sesuai target: ${st.murMetW} dari ${st.daysSoFar} hari\n`;
+    const today=S.logs[logId(k.id,t)];
+    if(today&&today.lancar)s+=`• Kelancaran hari ini: ${today.lancar}\n`;
+    if(st.guru)s+=`• Catatan guru (${fmtDate(st.guru.date)}): ${st.guru.catatanGuru}\n`;
+    if(k.catatanTarget)s+=`• Target: ${k.catatanTarget}\n`;
+  });
+  return s;
+}
+function sendWa(kidId){const k=kidId&&S.kids.find(x=>x.id===kidId),no=k&&isGuru()?waNumber(k.noWa):"";
+  window.open("https://wa.me/"+no+"?text="+encodeURIComponent(waReport(kidId)),"_blank","noopener")}
+
+/* ---------- ANAK & TARGET ---------- */
+function modeCard(){return`<div class="card welcome"><h2>Assalamu'alaikum 👋</h2>
+  <p class="hint" style="color:var(--ink)">Kamu pakai buku ini sebagai apa?</p>
+  <div class="seg" id="mode-seg"><button type="button" data-mode="ortu" aria-pressed="${!isGuru()}">Orang tua (pantau anak sendiri)</button><button type="button" data-mode="guru" aria-pressed="${isGuru()}">Guru (banyak murid)</button></div>
+  <p class="hint">Tidak perlu daftar. Semua catatan tersimpan di HP ini saja. Sudah punya file backup? <button class="btn ghost" type="button" data-goto="data" style="padding:4px 10px">Pulihkan di sini</button></p></div>`}
+function renderTarget(){
+  const w=W();
+  $("#view").innerHTML=`<div style="display:flex;flex-direction:column;gap:12px">
+   ${S.kids.length?`<p class="hint">Target dipakai untuk menghitung progres. Ubah kapan saja, misalnya tiap awal bulan sesuai target dari sekolah.${isGuru()?" Isi kolom Kelas yang sama supaya murid terkelompok per kelas.":""}</p>`:modeCard()}
+   <datalist id="kelas-list">${groups().map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
+   ${S.kids.map(k=>kidForm(k)).join("")}
+   <div class="card" id="new-kid-card"><h2>Tambah ${w.one}</h2>${kidFields({id:"",nama:"",kelas:S.group||"",noWa:"",targetMinggu:"",targetBulan:"",targetMurojaah:"",catatanTarget:""})}
+     <button class="btn" type="button" data-savekid="">Tambah</button></div>
+   ${S.kids.length?`<div class="card"><h2>Mode pemakaian</h2><div class="seg" id="mode-seg"><button type="button" data-mode="ortu" aria-pressed="${!isGuru()}">Orang tua</button><button type="button" data-mode="guru" aria-pressed="${isGuru()}">Guru</button></div></div>`:""}
+  </div>`;
+}
+function kidFields(k){const p="k-"+(k.id||"new")+"-";return`
+   <div class="grid2"><label>Nama<input id="${p}nama" value="${esc(k.nama)}"></label><label>Kelas / halaqah<input id="${p}kelas" list="kelas-list" value="${esc(k.kelas)}"></label></div>
+   ${isGuru()?`<label>No. WA orang tua (opsional, untuk kirim laporan)<input type="tel" inputmode="tel" id="${p}noWa" value="${esc(k.noWa)}" placeholder="08123456789"></label>`:""}
+   <div class="grid2"><label>Target setoran per minggu (ayat)<input type="number" inputmode="numeric" min="0" id="${p}targetMinggu" value="${esc(k.targetMinggu)}"></label>
+   <label>Target setoran per bulan (ayat)<input type="number" inputmode="numeric" min="0" id="${p}targetBulan" value="${esc(k.targetBulan)}"></label></div>
+   <label>Target murojaah per hari (ayat)<input type="number" inputmode="numeric" min="0" id="${p}targetMurojaah" value="${esc(k.targetMurojaah)}"></label>
+   <label>Target hafalan periode ini<input id="${p}catatanTarget" value="${esc(k.catatanTarget)}" placeholder="mis. Oktober: selesai Al-Gasyiyah dan Al-A'la"></label>`}
+function kidForm(k){return`<div class="card">${kidFields(k)}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" type="button" data-savekid="${esc(k.id)}">Simpan</button>
+  ${S.confirmDel===k.id?`<span class="confirm">Hapus ${esc(k.nama)} beserta semua catatannya? <button class="btn danger" type="button" data-delkid-yes="${esc(k.id)}">Ya, hapus</button><button class="btn ghost" type="button" data-delkid-no>Batal</button></span>`
+   :`<button class="btn danger" type="button" data-delkid="${esc(k.id)}">Hapus ${W().one}</button>`}</div></div>`}
+function saveKid(id){
+  const p="k-"+(id||"new")+"-",v=n=>document.getElementById(p+n).value.trim();
+  const nama=v("nama");if(!nama){toast("Nama "+W().one+" belum diisi");return}
+  const body={nama,kelas:v("kelas"),noWa:isGuru()?v("noWa"):((S.kids.find(k=>k.id===id)||{}).noWa||""),targetMinggu:+v("targetMinggu")||0,targetBulan:+v("targetBulan")||0,targetMurojaah:+v("targetMurojaah")||0,catatanTarget:v("catatanTarget")};
+  const before=S.kids.map(k=>({...k}));
+  if(id){const i=S.kids.findIndex(k=>k.id===id);S.kids[i]={...S.kids[i],...body}}
+  else{const nid=(nama.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,30)||"anak")+"-"+Date.now().toString(36);
+    S.kids.push({id:nid,...body,urut:Date.now()});S.kidId=nid}
+  if(!persist()){S.kids=before;return}
+  sortKids();toast(id?"Target tersimpan":W().One+" ditambahkan");renderTarget();
+}
+function delKid(id){
+  const kidsB=S.kids,logsB=S.logs;
+  S.kids=S.kids.filter(k=>k.id!==id);S.logs=Object.fromEntries(Object.entries(S.logs).filter(([,l])=>l.kidId!==id));
+  if(!persist()){S.kids=kidsB;S.logs=logsB;return}
+  S.form=null;toast(W().One+" dihapus");renderTarget();
+}
+
+/* ---------- BACKUP ---------- */
+function backupObject(){return{app:"buku-hafalan-anak",versi:1,dibuat:new Date().toISOString(),...snapshot()}}
+function backupBlob(){return new Blob([JSON.stringify(backupObject(),null,1)],{type:"application/json"})}
+function backupFileName(){return"backup-hafalan-"+todayStr()+".json"}
+function markBackup(kind){META.lastBackup=new Date().toISOString();META.lastBackupKind=kind;META.snoozeUntil=null;saveMeta();renderBanner()}
+function downloadBackup(){
+  const a=document.createElement("a");a.href=URL.createObjectURL(backupBlob());a.download=backupFileName();
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  markBackup("file");toast("File backup diunduh");if(S.tab==="data")renderData();
+}
+async function shareBackup(){
+  const file=new File([backupBlob()],backupFileName(),{type:"application/json"});
+  try{await navigator.share({files:[file],title:"Backup Buku Hafalan Anak"});markBackup("file");if(S.tab==="data")renderData()}
+  catch(e){if(e&&e.name!=="AbortError")toast("Tidak bisa membagikan file di perangkat ini")}
+}
+const canShareFile=()=>{try{return!!(navigator.canShare&&navigator.canShare({files:[new File(["x"],"x.json",{type:"application/json"})]}))}catch(_){return false}};
+function checkBackup(d){
+  if(!d||d.app!=="buku-hafalan-anak"||typeof d.kids!=="object"||typeof d.logs!=="object")throw new Error("bukan file backup Buku Hafalan Anak");
+  return d;
+}
+function askRestore(d,source){
+  S.pendingRestore={data:d,source};if(S.tab!=="data"){S.tab="data"}render();
+  const el=$("#restore-box");el&&el.scrollIntoView({block:"center",behavior:"smooth"});
+}
+function doRestore(){
+  const d=S.pendingRestore.data;const kidsB=S.kids,logsB=S.logs;
+  S.kids=Object.entries(d.kids).map(([id,k])=>({id,...k}));S.logs=d.logs;sortKids();
+  if(!persist()){S.kids=kidsB;S.logs=logsB;return}
+  S.pendingRestore=null;S.form=null;S.kidId=null;markBackup(META.lastBackupKind||"file");toast("Data berhasil dipulihkan");renderData();
+}
+$("#restore-file").addEventListener("change",async e=>{
+  const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{askRestore(checkBackup(JSON.parse(await f.text())),"file "+f.name)}catch(err){toast("File tidak bisa dibaca: "+(err.message||"format salah"))}
+});
+
+/* ---------- GOOGLE DRIVE (disimpan di Drive milik pengguna sendiri) ---------- */
+const G={client:null,token:null,exp:0,pending:null};
+const driveOn=()=>!!GOOGLE_CLIENT_ID;
+function loadGis(){
+  if(!driveOn()||G.loading)return;G.loading=true;
+  const s=document.createElement("script");s.src="https://accounts.google.com/gsi/client";s.async=true;
+  s.onload=()=>{try{G.client=google.accounts.oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:"https://www.googleapis.com/auth/drive.file",
+    callback:r=>{const p=G.pending;G.pending=null;if(r.error){p&&p.rej(new Error(r.error));return}G.token=r.access_token;G.exp=Date.now()+(+r.expires_in||3600)*1000;p&&p.res(G.token)},
+    error_callback:e=>{const p=G.pending;G.pending=null;p&&p.rej(new Error(e&&e.type||"popup"))}});if(S.tab==="data")renderData()}catch(_){}};
+  s.onerror=()=>{G.loading=false};document.head.appendChild(s);
+}
+/* dipanggil langsung dari klik supaya popup login Google tidak diblokir */
+function getToken(){
+  if(G.token&&Date.now()<G.exp-60000)return Promise.resolve(G.token);
+  if(!G.client)return Promise.reject(new Error("Google belum siap, coba lagi sebentar"));
+  return new Promise((res,rej)=>{G.pending={res,rej};G.client.requestAccessToken({prompt:G.token?"":"consent"})});
+}
+async function gfetch(url,opt={}){
+  const r=await fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization:"Bearer "+G.token}});
+  if(r.status===401){G.token=null;throw new Error("Sesi Google habis, ketuk lagi")}
+  if(!r.ok)throw new Error("Google Drive menolak ("+r.status+")");
+  return r;
+}
+async function findDriveFile(){
+  const q=encodeURIComponent(`name='${DRIVE_FILE_NAME.replace(/'/g,"\\'")}' and trashed=false`);
+  const r=await gfetch(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&orderBy=modifiedTime desc&fields=files(id,modifiedTime)&pageSize=1`);
+  return(await r.json()).files[0]||null;
+}
+async function driveSave(){
+  if(S.busy)return;
+  const tokenP=getToken();S.busy="save";renderData();
+  try{
+    await tokenP;
+    const existing=await findDriveFile();
+    const b="hafalan"+Date.now(),meta=existing?{}:{name:DRIVE_FILE_NAME,mimeType:"application/json"};
+    const body=`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(backupObject())}\r\n--${b}--`;
+    await gfetch(existing?`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`:"https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+      {method:existing?"PATCH":"POST",headers:{"Content-Type":"multipart/related; boundary="+b},body});
+    markBackup("drive");toast("Tersimpan di Google Drive kamu");
+  }catch(e){toast(niceErr(e))}
+  S.busy="";if(S.tab==="data")renderData();
+}
+async function driveLoad(){
+  if(S.busy)return;
+  const tokenP=getToken();S.busy="load";renderData();
+  try{
+    await tokenP;
+    const f=await findDriveFile();
+    if(!f){toast("Belum ada backup dari aplikasi ini di Drive kamu")}
+    else{const r=await gfetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`);S.busy="";askRestore(checkBackup(await r.json()),"Google Drive (disimpan "+fmtStamp(f.modifiedTime)+")");return}
+  }catch(e){toast(niceErr(e))}
+  S.busy="";if(S.tab==="data")renderData();
+}
+function niceErr(e){const m=e&&e.message||"";
+  if(/popup_closed|access_denied|popup/.test(m))return"Login Google dibatalkan";
+  if(/Failed to fetch|NetworkError/.test(m))return"Tidak ada internet";
+  return m||"Gagal, coba lagi"}
+
+/* ---------- PASANG DI HP ---------- */
+let installEvt=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;if(S.tab==="data")renderData()});
+window.addEventListener("appinstalled",()=>{installEvt=null;toast("Aplikasi terpasang di HP");if(S.tab==="data")renderData()});
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+
+function renderData(){
+  const lb=META.lastBackup,nLogs=Object.keys(S.logs).length,p=S.pendingRestore;
+  const pd=p&&p.data,pk=pd?Object.keys(pd.kids).length:0,pl=pd?Object.keys(pd.logs).length:0;
+  $("#view").innerHTML=`<div style="display:flex;flex-direction:column;gap:12px">
+   ${p?`<div class="confirm-box" id="restore-box"><b>Pulihkan dari ${esc(p.source)}?</b>
+     <span>Isinya ${pk} anak dan ${pl} catatan harian${pd.dibuat?`, dibuat ${esc(fmtStamp(pd.dibuat))}`:""}. Data di HP ini sekarang (${S.kids.length} anak, ${nLogs} catatan) akan <b>diganti</b>.</span>
+     <div class="btns"><button class="btn" type="button" id="restore-yes">Ya, pulihkan</button><button class="btn ghost" type="button" id="restore-no">Batal</button></div></div>`:""}
+   <div class="card">
+    <h2>Data kamu</h2>
+    <p class="hint" style="color:var(--ink)">Semua catatan (${S.kids.length} anak, ${nLogs} catatan harian) tersimpan <b>di HP/browser ini saja</b>, tidak dikirim ke server mana pun. Kalau HP hilang, ganti HP, atau data browser dihapus, catatan ikut hilang. Karena itu, backup rutin seminggu sekali ya.</p>
+    <div class="sum" style="${lb&&daysAgo(lb)<BACKUP_DAYS?"":"background:var(--gold-soft);color:var(--warn)"}">${lb?`Backup terakhir: ${agoText(lb)} (${META.lastBackupKind==="drive"?"Google Drive":"file"})`:"Belum pernah backup"}</div>
+   </div>
+   <div class="card">
+    <h2>Google Drive</h2>
+    ${driveOn()?`<p class="hint">Sekali ketuk, backup tersimpan di Google Drive kamu sendiri (file "${esc(DRIVE_FILE_NAME)}"). Aplikasi ini hanya bisa melihat file yang dibuatnya sendiri, bukan file Drive kamu yang lain.</p>
+     <div class="btns"><button class="btn" type="button" id="drive-save"${S.busy?" disabled":""}>${S.busy==="save"?"Menyimpan…":"Simpan ke Google Drive"}</button>
+     <button class="btn ghost" type="button" id="drive-load"${S.busy?" disabled":""}>${S.busy==="load"?"Mengambil…":"Pulihkan dari Drive"}</button></div>`
+    :`<p class="hint">Fitur simpan ke Google Drive belum diaktifkan di versi ini. Sementara pakai file backup di bawah.</p>`}
+   </div>
+   <div class="card">
+    <h2>File backup</h2>
+    <p class="hint">Simpan file ini di tempat aman, misalnya kirim ke chat WA diri sendiri atau email.</p>
+    <div class="btns">${canShareFile()?`<button class="btn" type="button" id="file-share">Kirim file backup</button><button class="btn ghost" type="button" id="file-dl">Unduh file</button>`
+      :`<button class="btn" type="button" id="file-dl">Unduh file backup</button>`}
+     <button class="btn ghost" type="button" id="file-restore">Pulihkan dari file</button></div>
+   </div>
+   ${isStandalone()?"":`<div class="card">
+    <h2>Pasang di HP</h2>
+    ${installEvt?`<p class="hint">Pasang supaya bisa dibuka langsung dari layar utama seperti aplikasi biasa, juga saat offline.</p><div><button class="btn" type="button" id="install">Pasang aplikasi</button></div>`
+     :isIOS()?`<ol class="steps"><li>Buka halaman ini di <b>Safari</b>.</li><li>Ketuk tombol <b>Bagikan</b> (kotak dengan panah ke atas).</li><li>Pilih <b>Tambahkan ke Layar Utama</b>.</li></ol>`
+     :`<ol class="steps"><li>Buka halaman ini di <b>Chrome</b>.</li><li>Ketuk menu <b>⋮</b> di kanan atas.</li><li>Pilih <b>Instal aplikasi</b> atau <b>Tambahkan ke layar utama</b>.</li></ol>`}
+   </div>`}
+  </div>`;
+}
+
+/* ---------- pengingat backup mingguan ---------- */
+function renderBanner(){
+  const b=$("#banner");
+  if(S.storageError){b.innerHTML="Penyimpanan browser tidak bisa dibaca. Kalau sedang di mode penyamaran/incognito, buka di browser biasa supaya catatan tersimpan.";b.hidden=false;return}
+  const lb=META.lastBackup,since=lb||META.createdAt;
+  const due=Object.keys(S.logs).length>0&&daysAgo(since)>=BACKUP_DAYS&&!(META.snoozeUntil&&Date.now()<+new Date(META.snoozeUntil));
+  if(!due||S.tab==="data"){b.hidden=true;return}
+  b.innerHTML=`<span>${lb?`Backup terakhir ${agoText(lb)}.`:"Catatan belum pernah di-backup."} Yuk backup dulu supaya catatan aman kalau HP bermasalah.</span>
+    <div class="btns">${driveOn()&&G.client?`<button class="btn" type="button" id="bn-drive" style="padding:8px 12px;font-size:14px">Simpan ke Drive</button>`:`<button class="btn" type="button" data-goto="data" style="padding:8px 12px;font-size:14px">Backup sekarang</button>`}
+    <button class="btn ghost" type="button" id="bn-later">Nanti</button></div>`;
+  b.hidden=false;
+}
+
+/* ---------- wiring ---------- */
+function render(){
+  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===S.tab));
+  ({isi:renderIsi,progres:renderProgres,target:renderTarget,data:renderData})[S.tab]();
+  renderBanner();
+}
+function updateLabels(){$("#tab-target").textContent=W().One}
+function go(tab){S.tab=tab;S.form=null;S.confirmDel=null;render();window.scrollTo({top:0});try{localStorage.setItem("tab",S.tab)}catch(_){}}
+document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)go(b.dataset.tab)});
+$("#banner").addEventListener("click",e=>{const t=e.target.closest("button");if(!t)return;
+  if(t.dataset.goto)go(t.dataset.goto);
+  if(t.id==="bn-later"){META.snoozeUntil=new Date(Date.now()+2*864e5).toISOString();saveMeta();renderBanner()}
+  if(t.id==="bn-drive"){go("data");driveSave()}
+});
+const view=$("#view");
+view.addEventListener("click",e=>{
+  const t=e.target.closest("button");if(!t)return;
+  if(t.dataset.goto){go(t.dataset.goto);return}
+  if(t.dataset.mode){META.mode=t.dataset.mode;saveMeta();updateLabels();render();return}
+  if(t.dataset.group!==undefined){S.group=t.dataset.group;S.form=null;S.openKid=null;render();return}
+  if(t.dataset.open!==undefined){S.openKid=t.dataset.open||null;renderProgres();return}
+  if(t.dataset.kid){S.kidId=t.dataset.kid;S.form=null;renderIsi();return}
+  if(t.id==="mur-add"){S.form.murojaah.push({surat:"",dari:"",sampai:""});renderMurRows();updateSums();return}
+  if(t.dataset.del!==undefined){S.form.murojaah.splice(+t.dataset.del,1);if(!S.form.murojaah.length)S.form.murojaah.push({surat:"",dari:"",sampai:""});renderMurRows();updateSums();return}
+  if(t.closest("#f-lancar")){S.form.dirty=true;S.form.lancar=S.form.lancar===t.dataset.v?"":t.dataset.v;t.parentNode.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===S.form.lancar));return}
+  if(t.id==="f-save"){save();return}
+  if(t.dataset.wa!==undefined){sendWa(t.dataset.wa);return}
+  if(t.dataset.savekid!==undefined){saveKid(t.dataset.savekid);return}
+  if(t.dataset.delkid){S.confirmDel=t.dataset.delkid;renderTarget();return}
+  if(t.dataset.delkidNo!==undefined){S.confirmDel=null;renderTarget();return}
+  if(t.dataset.delkidYes){S.confirmDel=null;delKid(t.dataset.delkidYes);return}
+  if(t.id==="file-dl"){downloadBackup();return}
+  if(t.id==="file-share"){shareBackup();return}
+  if(t.id==="file-restore"){$("#restore-file").click();return}
+  if(t.id==="restore-yes"){doRestore();return}
+  if(t.id==="restore-no"){S.pendingRestore=null;renderData();return}
+  if(t.id==="drive-save"){driveSave();return}
+  if(t.id==="drive-load"){driveLoad();return}
+  if(t.id==="install"&&installEvt){installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;renderData()});return}
+});
+view.addEventListener("input",e=>{
+  const t=e.target,f=S.form;if(!f)return;if(t.id!=="f-date")f.dirty=true;
+  const map={"f-s-dari":"dari","f-s-sampai":"sampai"};
+  if(map[t.id]){f.setor[map[t.id]]=t.value;updateSums();return}
+  if(t.id==="f-alasan"){f.alasan=t.value;return}
+  if(t.id==="f-guru"){f.catatanGuru=t.value;return}
+  if(t.id==="f-rumah"){f.catatanRumah=t.value;return}
+  const r=t.closest("[data-i]");if(r&&t.dataset.f&&t.tagName==="INPUT"){f.murojaah[+r.dataset.i][t.dataset.f]=t.value;updateSums()}
+});
+view.addEventListener("change",e=>{
+  const t=e.target,f=S.form;
+  if(t.id==="f-date"){if(t.value){S.date=t.value;S.form=null;renderIsi()}return}
+  if(!f)return;f.dirty=true;
+  if(t.id==="f-tidak"){f.tidakSetor=t.checked;$("#setor-box").hidden=t.checked;$("#alasan-box").hidden=!t.checked;updateSums();return}
+  if(t.id==="f-s-surat"){f.setor.surat=t.value;if(t.value&&!f.setor.dari){f.setor.dari=1;$("#f-s-dari").value=1}updateSums();return}
+  const r=t.closest("[data-i]");
+  if(r&&t.dataset.f==="surat"){const m=f.murojaah[+r.dataset.i];m.surat=t.value;
+    if(t.value){m.dari=1;m.sampai=suratBy(+t.value).ayat;r.querySelector('[data-f="dari"]').value=1;r.querySelector('[data-f="sampai"]').value=m.sampai}updateSums()}
+});
+/* data bisa berubah dari tab browser lain */
+window.addEventListener("storage",e=>{if(e.key===KEY||e.key===META_KEY){loadAll();if(!(S.form&&S.form.dirty))S.form=null;render()}});
+
+$("#today-line").textContent=fmtLong(todayStr());
+loadAll();updateLabels();
+try{const t=localStorage.getItem("tab");if(t&&["isi","progres","target","data"].includes(t))S.tab=t}catch(_){}
+if(!S.kids.length&&!S.storageError)S.tab="target";
+render();
+loadGis();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(_){}
+if("serviceWorker"in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
